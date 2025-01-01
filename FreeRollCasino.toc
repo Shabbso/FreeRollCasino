@@ -1,0 +1,12 @@
+## Interface: 90500
+## Title: Free Roll Casino
+## Notes: Multiple mini-games (Free Roll & Worn Troll Dice) + Config + UI
+## Version: 1.3
+## Author: Shabbso
+## SavedVariables: FreeRollCasinoDB
+
+FreeRollGame.lua
+TrollDiceGame.lua
+FreeRollCasino.lua
+CasinoUI.lua
+ConfigPanel.lua
