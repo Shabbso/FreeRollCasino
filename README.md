@@ -3,129 +3,130 @@ FreeRollCasino Addon - README
 
 1. Introduction
 ---------------
-FreeRollCasino is a World of Warcraft addon that provides two casino-style
-mini-games, a configurable panel for min/max bets, and a live UI window 
-to track recent bet outcomes:
+FreeRollCasino is a World of Warcraft addon that brings a small in-game "casino"
+experience to you and your friends. It currently offers **three mini-games**:
 
 1) **Free Roll (1–100)**:
    - 1–66: Lose
    - 67–97: Double (2× payout)
    - 98–100: Triple (3× payout)
 
-2) **Worn Troll Dice (2–12)**:
-   - 2–6: Lose
-   - 7: Bet returned (break-even)
-   - 8–9: 2× payout
-   - 10–11: 3× payout
-   - 12: 4× payout
+2) **Worn Troll Dice (2–6)**:
+   - 2–5: Lose
+   - 6: Return bet
+   - 7–8: Double
+   - 9–11: Triple
+   - 12: Quadruple
+   *(Or whatever custom rules you choose; the addon's code is flexible.)*
 
-It allows you to accept gold bets from other players, detects their rolls,
-announces the result in chat, and maintains a scrollable UI log of all bets.
+3) **WoW Blackjack**:
+   - Players trade in a bet, then use a **custom UI** (Deal/Hit/Stand) to try
+     to reach 21 without going bust.
+   - The "dealer" is also automated. You can track final outcomes in-game.
 
-2. Features
------------
-- **Two distinct game modes** (select with `/casinomode freeroll` or `/casinomode troll`).
-- **Configurable Min/Max Bets** via a new interface panel (Escape → Options → AddOns).
-- **Scrollable UI** (`/casinoui`) to view all bets, winners, and net gains/losses:
-  - Stores session-based history in `CasinoRecords`.
-  - Logs time, player name, bet amount, final roll, outcome, and net gain.
-- **Hybrid Support** for older expansions (Cataclysm Classic, Wrath, etc.) and modern Retail:
-  - Uses `InterfaceOptions_AddCategory` if available.
-  - Falls back to the new Settings API (`Settings.RegisterAddOnCategory`) in Retail 10.0+.
+The addon also includes:
+- A **Config Panel** (in Escape → AddOns or new Settings) to set min/max bets.
+- A **logging system** (`CasinoRecords`) for ephemeral session data.
+- A **scrollable UI** (`/casinoui`) for viewing recent wins/losses.
 
-3. Installation
+2. Installation
 ---------------
-1) Download or copy the following files into a folder named **FreeRollCasino**:
-   - **FreeRollCasino.toc**
-   - **FreeRollCasino.lua**
-   - **FreeRollGame.lua**
-   - **TrollDiceGame.lua**
-   - **CasinoUI.lua**
-   - **ConfigPanel.lua**
+1) **Download/Copy** all addon files into a folder named **FreeRollCasino**:
+   - `FreeRollCasino.toc`
+   - `FreeRollGame.lua`
+   - `TrollDiceGame.lua`
+   - `BlackjackGame.lua`
+   - `BlackjackUI.lua`
+   - `FreeRollCasino.lua`
+   - `CasinoUI.lua`
+   - `ConfigPanel.lua`
 
-2) Move that **FreeRollCasino** folder into: /Interface/AddOns/
-3) Restart or Reload WoW:
-- At the character selection screen, **enable** "FreeRollCasino".
-- In-game, type `/reload` to finalize loading if needed.
+2) Move **FreeRollCasino** into: /Interface/AddOns/
+3) **Enable** "FreeRollCasino" in your WoW AddOns list and/or type `/reload` if
+you’re already logged in.
 
-4. How to Use
--------------
-1) **Select a Game Mode**  
-- By default, the addon starts in "Free Roll" (1–100).
-- Type `/casinomode troll` to switch to "Worn Troll Dice".
-- Type `/casinomode freeroll` to switch back.
+3. How It Works
+---------------
+### Game Modes
+You can switch between any of the three games via `/casinomode`:
 
-2) **Accepting Bets**  
-- Another player trades you gold within the configured min/max limits 
-  (default 5–5000 gold, adjustable via the Config panel).
-- The addon automatically tracks the bet.
+- **`/casinomode freeroll`**  
+Uses the single 1–100 roll system.
 
-3) **Rolling**  
-- **Free Roll**: The betting player types `/roll` (or `/roll 100`) in chat.
-- **Worn Troll Dice**: The player uses the toy from their Toy Box, generating two
-  1–6 rolls in the system chat.
+- **`/casinomode troll`**  
+Uses the "Worn Troll Dice" 2d6 system, detecting two 1–6 rolls.
 
-4) **Outcome Announcements**  
-- The addon listens for system roll messages and determines the result.
-- Winners/losers are announced in `/say` and (for certain wins) whispered to claim payouts.
-- The host can then open a trade window to pay out the winnings.
+- **`/casinomode blackjack`**  
+Enables the **Blackjack** mini-game. (See below.)
 
-5) **Viewing the History (UI Window)**  
-- Type `/casinoui` in chat to open/close a scrollable window listing recent bets.
-- Displays time, player, bet amount, rolled value(s), outcome, and net gain/loss.
-- Automatically refreshes if it’s open when new bets are resolved.
+### Accepting Bets
+Players trade gold to the host (you) within the **min/max** bet range you’ve set
+in the config panel. The addon tracks the bet for that specific player.
 
-5. Configuring Bet Limits
--------------------------
-- From the main game, press **Escape** → **Options** → **AddOns** (or **Settings** → 
-**AddOns** in newer clients) and select **Free Roll Casino**.
-- Adjust the **Min Bet** and **Max Bet** sliders in real time.
-- The new values are saved in `FreeRollCasinoDB` and persist across sessions.
+### Rolling / Game Flow
+- **Free Roll**: The player types `/roll` (or `/roll 100`) in chat. The addon
+checks the result and announces if they doubled, tripled, or lost.
+- **Worn Troll Dice**: The player uses the "Worn Troll Dice" toy (in their Toy
+Box), automatically sending two separate "rolls (1–6)" events that the addon
+detects. The final sum is used to determine lose, double, triple, etc.
+- **Blackjack**:
+- Open the **Blackjack UI** by typing `/bjui` (or automatically if you do
+ `/casinomode blackjack` and the code is set to auto-show).
+- Click **Deal** to start a round (must have traded gold first).
+- Click **Hit** to draw another “card” (number 1–11).
+- Click **Stand** to finalize your hand. The dealer will then draw until
+ reaching 17+ or busting, and the addon announces the outcome.
 
-6. Slash Commands
------------------
-- **`/casinomode freeroll`**: Switch to the Free Roll (1–100) game.
-- **`/casinomode troll`**: Switch to the Worn Troll Dice (2×1–6) game.
-- **`/casinoui`**: Opens or closes the live history UI window.
-- **`/reload`**: Common WoW command to reload the interface (useful after editing files).
+### Viewing History
+You can open a scrollable log with `/casinoui` to see who bet, what they rolled,
+and how much they won or lost. This data is **session-based** (not saved across
+logouts).
 
-7. Frequently Asked Questions
------------------------------
-**Q1**: "How do I change min/max bets without editing Lua files?"
-- **A1**: Use the in-game config panel under **AddOns** → **Free Roll Casino**. The slider changes take effect immediately.
+4. FAQ
+------
+**Q1: "How do I install or update?"**  
+A1: Copy the files to your `Interface/AddOns/FreeRollCasino` folder. Make sure
+they’re all named correctly and listed in the `.toc` file. Then `/reload` or
+restart the game.
 
-**Q2**: "Does the addon automatically pay the winner?"
-- **A2**: No. WoW’s API prevents automatic trading. The addon announces how much
-the player wins, but you must open a trade window manually to pay out.
+**Q2: "Why can’t I automatically pay out winners?"**  
+A2: WoW’s API disallows fully automated trading for gold to prevent exploitation.
+The addon logs amounts owed, but you must manually open a trade window.
 
-**Q3**: "What if a random person rolls without trading gold first?"
-- **A3**: The roll is ignored. The addon only processes rolls from players with an
-active bet recorded.
+**Q3: "Can I run multiple games at once?"**  
+A3: Only one game mode is active at a time (`/casinomode freeroll | troll | blackjack`).
+If you switch mid-game, the current bets may be reset, so finish up ongoing bets
+first.
 
-**Q4**: "Will the UI log remain after I log out?"
-- **A4**: Currently, no. The session-based history in `CasinoRecords` is not saved 
-across logins. You can add SavedVariables for `CasinoRecords` if you wish to
-store a permanent history.
+**Q4: "What if someone rolls without trading gold?"**  
+A4: The addon ignores that roll. A debug message prints locally (not publicly)
+stating no bet was found.
 
-**Q5**: "I'm on an older expansion (like Cataclysm Classic). Will it still work?"
-- **A5**: Yes. The hybrid approach tries `InterfaceOptions_AddCategory` first, 
-which works on Cataclysm Classic. If you eventually play Retail 10.0+, it uses
-the new `Settings` API automatically.
+**Q5: "Does the Blackjack UI handle multi-player scenarios?"**  
+A5: The current version is simplified for single-player vs. the dealer. You can
+expand it, but that’d require more concurrency logic.
 
-8. Tips & Best Practices
+**Q6: "Is there a chance to incorporate special card logic like Aces (1 or 11)?"**  
+A6: By default, the code uses straight `1–11` values. You can modify the
+`CalculateTotal` function in `BlackjackGame.lua` for more authentic Blackjack
+handling.
+
+5. Tips & Best Practices
 ------------------------
-- **Trust but verify**: Double-check each trade for the correct gold amount.
-- **Prompt payouts** help maintain trust with your bettors.
-- **Extend/Customize**: Feel free to modify payouts, add special rules, or 
-implement a system to track session-based profit/loss for each user.
-- If you want a permanent record of all bets, consider adding 
-`SavedVariables: CasinoRecordsDB` and storing them similarly to min/max bets.
+- **Test** on a second account or with a friend to verify trades and rolls.
+- **Payout promptly** to build trust and avoid confusion.
+- **Customize**: Feel free to alter dice rules or payout structures in the `.lua`
+files. Just keep track of the logic so players aren’t surprised.
+- **Use the Config Panel**: (Escape → AddOns → FreeRollCasino) to adjust min/max
+bets without editing Lua files.
 
-9. Disclaimer
+6. Disclaimer
 -------------
 - This addon is for **entertainment purposes** within WoW.
-- **Gambling** (even with virtual currency) can be subject to Blizzard’s policies.
-Use responsibly and respect your server/community rules.
+- **Gambling** (even with virtual currency) may be subject to Blizzard’s policies.
+Use responsibly and respect server/community rules.
 
-Thank you for choosing **FreeRollCasino**—have fun rolling, and may the odds be
-ever in your favor! - Your favorite gambler, Shabbso
+---
+
+**Thank you for installing FreeRollCasino!**  
+Have fun, and may the dice (or cards) roll in your favor.  
