@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------
 -- FreeRollCasino.lua
--- Main "hub" file that ties both games together.
+-- Main "hub" file that ties multiple games together (FreeRoll, TrollDice, Blackjack).
 -- Also defines a global table CasinoRecords to log outcomes for the UI.
 -------------------------------------------------------------------------------
 
@@ -17,13 +17,23 @@ local CasinoFrame = CreateFrame("Frame")
 CasinoFrame:RegisterEvent("TRADE_ACCEPT_UPDATE")
 CasinoFrame:RegisterEvent("CHAT_MSG_SYSTEM")
 
+-- References to other game modules (you must load them before this file in .toc)
+local FreeRollGame  = _G["FreeRollGame"]
+local TrollDiceGame = _G["TrollDiceGame"]
+local BlackjackGame = _G["BlackjackGame"]       -- new
+local BlackjackUI   = _G["BlackjackUI"]         -- new UI with Deal/Hit/Stand
+
 local function OnEvent(self, event, ...)
     if event == "TRADE_ACCEPT_UPDATE" then
         local playerName, goldAmount = ...
+
         if currentGameMode == "FreeRoll" then
             FreeRollGame:OnTrade(playerName, goldAmount)
-        else
+        elseif currentGameMode == "TrollDice" then
             TrollDiceGame:OnTrade(playerName, goldAmount)
+        elseif currentGameMode == "Blackjack" then
+            -- Add Blackjack integration here
+            BlackjackGame:OnTrade(playerName, goldAmount)
         end
 
     elseif event == "CHAT_MSG_SYSTEM" then
@@ -36,7 +46,7 @@ local function OnEvent(self, event, ...)
             if currentGameMode == "FreeRoll" then
                 FreeRollGame:OnSystemRoll(frPlayer, frRoll)
             else
-                print("|cffcccccc[TrollDice] Ignoring 1-100 roll from " 
+                print("|cffcccccc[Casino] Ignoring 1–100 roll from " 
                       .. frPlayer .. " (not in FreeRoll mode).|r")
             end
             return
@@ -49,7 +59,7 @@ local function OnEvent(self, event, ...)
             if currentGameMode == "TrollDice" then
                 TrollDiceGame:OnSystemRoll(tdPlayer, tdRoll)
             else
-                print("|cffcccccc[FreeRoll] Ignoring 1-6 roll from " 
+                print("|cffcccccc[Casino] Ignoring 1–6 roll from " 
                       .. tdPlayer .. " (not in TrollDice mode).|r")
             end
             return
@@ -68,11 +78,23 @@ SlashCmdList["CASINOMODE"] = function(mode)
     if mode == "freeroll" then
         currentGameMode = "FreeRoll"
         print("|cffffff00[Casino] Game mode set to Free Roll.|r")
+
     elseif mode == "troll" then
         currentGameMode = "TrollDice"
         print("|cffffff00[Casino] Game mode set to Worn Troll Dice.|r")
+
+    elseif mode == "blackjack" then
+        currentGameMode = "Blackjack"
+        print("|cffffff00[Casino] Game mode set to Blackjack.|r")
+
+        -- OPTIONAL: auto-open the Blackjack UI
+        if BlackjackUI then
+            BlackjackUI:Show()
+            BlackjackUI:RefreshUI()
+        end
+
     else
-        print("|cffffff00Usage: /casinomode freeroll  OR  /casinomode troll|r")
+        print("|cffffff00Usage: /casinomode freeroll | troll | blackjack|r")
         print("|cffffff00Currently: " .. currentGameMode .. "|r")
     end
 end
