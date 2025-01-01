@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- FreeRollCasino.lua
 -- Main "hub" file that ties multiple games together (FreeRoll, TrollDice, Blackjack).
--- Also defines a global table CasinoRecords to log outcomes for the UI.
+-- Now includes roundActive logic and whispers the trader if a round is in progress.
 -------------------------------------------------------------------------------
 
 -- We'll store persistent config in FreeRollCasinoDB (defined in .toc).
@@ -9,6 +9,9 @@
 CasinoRecords = CasinoRecords or {}
 
 local currentGameMode = "FreeRoll"  -- default mode
+
+-- Simple flag to indicate a round is in progress (any game). We'll default to false.
+local roundActive = false
 
 -- Create a frame to handle events
 local CasinoFrame = CreateFrame("Frame")
@@ -23,16 +26,34 @@ local TrollDiceGame = _G["TrollDiceGame"]
 local BlackjackGame = _G["BlackjackGame"]       -- new
 local BlackjackUI   = _G["BlackjackUI"]         -- new UI with Deal/Hit/Stand
 
+-------------------------------------------------------------------------------
+-- Utility function so game modules can set "roundActive" as true/false.
+-------------------------------------------------------------------------------
+function SetRoundActive(state)
+    roundActive = state
+end
+
 local function OnEvent(self, event, ...)
     if event == "TRADE_ACCEPT_UPDATE" then
         local playerName, goldAmount = ...
 
+        -- If a round is in progress, whisper the trader to wait.
+        if roundActive then
+            SendChatMessage(
+                "A round is currently in progress. Please wait until it finishes before placing a new bet!",
+                "WHISPER",
+                nil,
+                playerName
+            )
+            return
+        end
+
+        -- Otherwise, process their bet as usual based on the current game mode.
         if currentGameMode == "FreeRoll" then
             FreeRollGame:OnTrade(playerName, goldAmount)
         elseif currentGameMode == "TrollDice" then
             TrollDiceGame:OnTrade(playerName, goldAmount)
         elseif currentGameMode == "Blackjack" then
-            -- Add Blackjack integration here
             BlackjackGame:OnTrade(playerName, goldAmount)
         end
 
@@ -46,7 +67,7 @@ local function OnEvent(self, event, ...)
             if currentGameMode == "FreeRoll" then
                 FreeRollGame:OnSystemRoll(frPlayer, frRoll)
             else
-                print("|cffcccccc[Casino] Ignoring 1–100 roll from " 
+                print("|cffcccccc[Casino] Ignoring 1–100 roll from "
                       .. frPlayer .. " (not in FreeRoll mode).|r")
             end
             return
@@ -59,7 +80,7 @@ local function OnEvent(self, event, ...)
             if currentGameMode == "TrollDice" then
                 TrollDiceGame:OnSystemRoll(tdPlayer, tdRoll)
             else
-                print("|cffcccccc[Casino] Ignoring 1–6 roll from " 
+                print("|cffcccccc[Casino] Ignoring 1–6 roll from "
                       .. tdPlayer .. " (not in TrollDice mode).|r")
             end
             return

@@ -1,7 +1,7 @@
 ## Interface: 90500
 ## Title: Free Roll Casino
-## Notes: Added Blackjack Game Module
-## Version: 1.4
+## Notes: Trade Whisper Update
+## Version: 1.5
 ## Author: Shabbso
 
 FreeRollGame.lua

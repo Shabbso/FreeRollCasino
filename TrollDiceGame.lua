@@ -1,20 +1,9 @@
--------------------------------------------------------------------------------
 -- TrollDiceGame.lua
--- 2d6 logic for Worn Troll Dice with updated rules:
---   2-6 = lose
---   7   = break-even
---   8-9 = double
---   10-11 = triple
---   12  = 4x
 -------------------------------------------------------------------------------
-
 local TrollDiceGame = {}
 TrollDiceGame.playerBets = {}
 TrollDiceGame.toyRolls   = {}
 
---------------------------------------------------------------------------------
--- Called when someone trades you gold for this Troll Dice game
---------------------------------------------------------------------------------
 function TrollDiceGame:OnTrade(player, amount)
     local minB = FreeRollCasinoDB.minBet or 5
     local maxB = FreeRollCasinoDB.maxBet or 5000
@@ -27,10 +16,6 @@ function TrollDiceGame:OnTrade(player, amount)
     print("|cff00ff00[TrollDice] " .. player .. " placed a bet of " .. amount .. "g!|r")
 end
 
---------------------------------------------------------------------------------
--- Called when the system sees "<player> rolls X (1-6)"
--- The toy does this twice (die1, die2).
---------------------------------------------------------------------------------
 function TrollDiceGame:OnSystemRoll(player, rollValue)
     if not self.playerBets[player] then
         print("|cffcccccc[TrollDice] Ignoring roll from " .. player .. " - no bet on record.|r")
@@ -49,8 +34,11 @@ function TrollDiceGame:OnSystemRoll(player, rollValue)
         rolls.die2 = rollValue
         print("|cff00ff00[TrollDice] " .. player .. " second die: " .. rollValue .. "|r")
 
+        -- Now we have two dice, let's mark round active
+        SetRoundActive(true)
+
         local sum = rolls.die1 + rolls.die2
-        print("|cff00ff00[TrollDice] " .. player .. " final roll: " 
+        print("|cff00ff00[TrollDice] " .. player .. " final roll: "
               .. rolls.die1 .. " + " .. rolls.die2 .. " = " .. sum .. "|r")
 
         self:ResolveBet(player, sum)
@@ -58,17 +46,12 @@ function TrollDiceGame:OnSystemRoll(player, rollValue)
         -- Clear bet/roll storage
         self.playerBets[player] = nil
         self.toyRolls[player] = nil
+
+        -- Round done
+        SetRoundActive(false)
     end
 end
 
---------------------------------------------------------------------------------
--- Resolve Bet with the updated rules:
---   2–6 = lose,
---   7   = break-even,
---   8–9 = 2×,
---   10–11 = 3×,
---   12 = 4×
---------------------------------------------------------------------------------
 function TrollDiceGame:ResolveBet(player, sum)
     local bet = self.playerBets[player]
     if not bet then return end
@@ -77,19 +60,16 @@ function TrollDiceGame:ResolveBet(player, sum)
     local netGain = -bet
 
     if sum >= 2 and sum <= 6 then
-        -- Lose
         print("|cffff0000[TrollDice] " .. player .. " rolled " .. sum .. ". Loses " .. bet .. "g.|r")
         SendChatMessage(player .. " rolled " .. sum .. " and lost " .. bet .. "g!", "SAY")
 
     elseif sum == 7 then
-        -- Break-even
         outcome = "BreakEven"
         netGain = 0
         print("|cffffff00[TrollDice] " .. player .. " rolled 7. Bet returned: " .. bet .. "g.|r")
         SendChatMessage(player .. " rolled a 7 and broke even! Their " .. bet .. "g is returned.", "SAY")
 
     elseif sum >= 8 and sum <= 9 then
-        -- 2×
         outcome = "2x"
         netGain = bet
         local winnings = bet * 2
@@ -97,23 +77,21 @@ function TrollDiceGame:ResolveBet(player, sum)
         SendChatMessage(player .. " rolled " .. sum .. " and won " .. winnings .. "g!", "SAY")
 
     elseif sum >= 10 and sum <= 11 then
-        -- 3×
         outcome = "3x"
-        netGain = 2 * bet
+        netGain = bet * 2
         local winnings = bet * 3
         print("|cff00ff00[TrollDice] " .. player .. " rolled " .. sum .. ". Wins " .. winnings .. "g!|r")
         SendChatMessage(player .. " rolled " .. sum .. " and won " .. winnings .. "g!", "SAY")
 
     elseif sum == 12 then
-        -- 4×
         outcome = "4x"
-        netGain = 3 * bet
+        netGain = bet * 3
         local winnings = bet * 4
         print("|cff00ff00[TrollDice] " .. player .. " rolled 12. Wins " .. winnings .. "g!|r")
         SendChatMessage(player .. " rolled 12 (Boxcars!) and won " .. winnings .. "g!", "SAY")
     end
 
-    -- Record result if you have a logging system (e.g. CasinoRecords)
+    -- Record result
     table.insert(CasinoRecords, {
         time = date("%H:%M:%S"),
         player = player,
@@ -129,7 +107,4 @@ function TrollDiceGame:ResolveBet(player, sum)
     end
 end
 
--------------------------------------------------------------------------------
--- Make sure the global name is set so the main addon can see it
--------------------------------------------------------------------------------
 _G["TrollDiceGame"] = TrollDiceGame

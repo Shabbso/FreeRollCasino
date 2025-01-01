@@ -1,6 +1,6 @@
--------------------------------------------------------------------------------
 -- FreeRollGame.lua
--- Single-roll (1–100) logic.
+-------------------------------------------------------------------------------
+-- Single-roll (1–100) logic, now with roundActive toggles.
 -------------------------------------------------------------------------------
 
 local FreeRollGame = {}
@@ -24,17 +24,20 @@ function FreeRollGame:OnSystemRoll(player, roll)
         return
     end
 
+    ----------------------------------------------------------------
+    -- Mark the round as active once we confirm a valid roll & bet
+    ----------------------------------------------------------------
+    SetRoundActive(true)
+
     local bet = self.playerBets[player]
     local outcome = "Lose"
     local netGain = -bet
 
     if roll >= 1 and roll <= 66 then
-        -- Lose
         print("|cffff0000[FreeRoll] " .. player .. " rolled " .. roll .. ". They lose!|r")
         SendChatMessage(player .. " rolled " .. roll .. " and lost their bet of " .. bet .. "g!", "SAY")
 
     elseif roll >= 67 and roll <= 97 then
-        -- Double
         outcome = "Double"
         netGain = bet
         local winnings = bet * 2
@@ -43,7 +46,6 @@ function FreeRollGame:OnSystemRoll(player, roll)
         SendChatMessage(player .. " rolled " .. roll .. " and won " .. winnings .. "g!", "SAY")
 
     elseif roll >= 98 and roll <= 100 then
-        -- Triple
         outcome = "Triple"
         netGain = bet * 2
         local winnings = bet * 3
@@ -69,6 +71,11 @@ function FreeRollGame:OnSystemRoll(player, roll)
 
     -- Clear bet
     self.playerBets[player] = nil
+
+    ----------------------------------------------------------------
+    -- Now that outcome is decided, mark round inactive again.
+    ----------------------------------------------------------------
+    SetRoundActive(false)
 end
 
 _G["FreeRollGame"] = FreeRollGame
