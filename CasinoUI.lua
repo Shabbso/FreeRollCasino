@@ -1,11 +1,12 @@
 -------------------------------------------------------------------------------
 -- CasinoUI.lua
--- Provides a scrollable frame to list recent bet outcomes (CasinoRecords).
+-- Provides a scrollable frame to list recent bet outcomes (CasinoRecords),
+-- plus three new buttons to switch game modes: Free Roll, Troll Dice, Blackjack.
 -------------------------------------------------------------------------------
 
 -- Create a main frame
 local CasinoUI = CreateFrame("Frame", "FreeRollCasinoUIFrame", UIParent, "BasicFrameTemplateWithInset")
-CasinoUI:SetSize(400, 300)
+CasinoUI:SetSize(400, 340)  -- Increased height a bit to fit buttons
 CasinoUI:SetPoint("CENTER")
 CasinoUI:EnableMouse(true)
 CasinoUI:SetMovable(true)
@@ -26,7 +27,8 @@ CasinoUI.title:SetText("Free Roll Casino Records")
 -- ScrollFrame
 local scrollFrame = CreateFrame("ScrollFrame", "FreeRollCasinoScrollFrame", CasinoUI, "UIPanelScrollFrameTemplate")
 scrollFrame:SetPoint("TOPLEFT", 15, -40)
-scrollFrame:SetPoint("BOTTOMRIGHT", -30, 15)
+scrollFrame:SetPoint("BOTTOMRIGHT", -30, 55)  
+-- Note: We leave some extra space at the bottom for the new buttons
 
 local scrollChild = CreateFrame("Frame")
 scrollChild:SetSize(1, 1)
@@ -67,7 +69,41 @@ end
 
 CasinoUI.Refresh = RefreshUI  -- Expose for outside calls
 
--- Slash Command to toggle
+------------------------------------------------------------------------------
+-- 3 New Buttons to Switch Game Modes
+-- We'll call the same internal function that the slash command uses:
+-- SlashCmdList["CASINOMODE"]("<mode>")
+------------------------------------------------------------------------------
+
+-- 1) Free Roll Button
+local freeRollButton = CreateFrame("Button", nil, CasinoUI, "UIPanelButtonTemplate")
+freeRollButton:SetSize(90, 22)
+freeRollButton:SetPoint("BOTTOMLEFT", 15, 15)
+freeRollButton:SetText("Free Roll")
+freeRollButton:SetScript("OnClick", function()
+    -- This calls the same logic as typing /casinomode freeroll
+    SlashCmdList["CASINOMODE"]("freeroll")
+end)
+
+-- 2) Troll Dice Button
+local trollDiceButton = CreateFrame("Button", nil, CasinoUI, "UIPanelButtonTemplate")
+trollDiceButton:SetSize(90, 22)
+trollDiceButton:SetPoint("LEFT", freeRollButton, "RIGHT", 10, 0)
+trollDiceButton:SetText("Troll Dice")
+trollDiceButton:SetScript("OnClick", function()
+    SlashCmdList["CASINOMODE"]("troll")
+end)
+
+-- 3) Blackjack Button
+local blackjackButton = CreateFrame("Button", nil, CasinoUI, "UIPanelButtonTemplate")
+blackjackButton:SetSize(90, 22)
+blackjackButton:SetPoint("LEFT", trollDiceButton, "RIGHT", 10, 0)
+blackjackButton:SetText("Blackjack")
+blackjackButton:SetScript("OnClick", function()
+    SlashCmdList["CASINOMODE"]("blackjack")
+end)
+
+-- Slash Command to toggle the Casino UI
 SLASH_CASINOUI1 = "/casinoui"
 SlashCmdList["CASINOUI"] = function()
     if FreeRollCasinoUIFrame:IsShown() then
