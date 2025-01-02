@@ -46,9 +46,10 @@ introText:SetWidth(470) -- so text wraps nicely
 introText:SetText(
     "Welcome to the Free Roll Casino!\n\n" ..
     "How to use:\n" ..
-    "1) Trade your gold bet to the host.\n" ..
-    "2) The host will switch to the desired game mode.\n" ..
-    "3) Follow the instructions for rolling, using the Troll Dice toy, or playing Blackjack!\n\n" ..
+    "1) Set your bet range in the Casino Options.\n" ..
+    "2) Select the desired game mode below.\n" ..
+    "3) Customer will trade gold to place a wager with the host.\n" ..
+    "4) Follow the instructions for rolling, using the Troll Dice toy, or playing Blackjack!\n\n" ..
     "Check out the logs below to see recent outcomes."
 )
 
