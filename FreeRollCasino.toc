@@ -1,7 +1,7 @@
 ## Interface: 90500
 ## Title: Free Roll Casino
-## Notes: Trade Whisper Update
-## Version: 1.5
+## Notes: Expanded UI Update
+## Version: 1.1.2
 ## Author: Shabbso
 
 FreeRollGame.lua

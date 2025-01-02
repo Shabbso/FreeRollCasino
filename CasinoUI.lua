@@ -1,54 +1,116 @@
 -------------------------------------------------------------------------------
 -- CasinoUI.lua
--- Provides a scrollable frame to list recent bet outcomes (CasinoRecords),
--- plus three new buttons to switch game modes: Free Roll, Troll Dice, Blackjack.
+-- A more user-friendly version:
+--   1) Opens automatically on addon load.
+--   2) Provides a welcome message.
+--   3) Shows min/max bet info.
+--   4) Slightly more "styled" layout.
 -------------------------------------------------------------------------------
 
--- Create a main frame
-local CasinoUI = CreateFrame("Frame", "FreeRollCasinoUIFrame", UIParent, "BasicFrameTemplateWithInset")
-CasinoUI:SetSize(400, 340)  -- Increased height a bit to fit buttons
+-- We'll assume FreeRollCasinoDB is already loaded with minBet and maxBet.
+-- We also assume CasinoRecords is globally available.
+
+local CasinoUI = CreateFrame("Frame", "FreeRollCasinoUIFrame", UIParent, "BackdropTemplate")
+
+-- Increase the size for more space
+CasinoUI:SetSize(500, 400)
 CasinoUI:SetPoint("CENTER")
 CasinoUI:EnableMouse(true)
 CasinoUI:SetMovable(true)
 CasinoUI:RegisterForDrag("LeftButton")
-CasinoUI:SetScript("OnDragStart", function(self)
-    self:StartMoving()
-end)
-CasinoUI:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-end)
-CasinoUI:Hide()  -- Hidden by default
+CasinoUI:SetScript("OnDragStart", function(self) self:StartMoving() end)
+CasinoUI:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+-- Instead of :Hide(), we'll keep it open by default:
+-- If you prefer to show/hide on load, set it to Hide() and manually call :Show().
+CasinoUI:Show()
 
--- Title text
-CasinoUI.title = CasinoUI:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-CasinoUI.title:SetPoint("TOP", 0, -10)
-CasinoUI.title:SetText("Free Roll Casino Records")
+-- Slightly "prettier" backdrop
+CasinoUI:SetBackdrop({
+    bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 8, right = 8, top = 8, bottom = 8 },
+})
+CasinoUI:SetBackdropColor(0,0,0,0.8)
 
--- ScrollFrame
-local scrollFrame = CreateFrame("ScrollFrame", "FreeRollCasinoScrollFrame", CasinoUI, "UIPanelScrollFrameTemplate")
-scrollFrame:SetPoint("TOPLEFT", 15, -40)
-scrollFrame:SetPoint("BOTTOMRIGHT", -30, 55)  
--- Note: We leave some extra space at the bottom for the new buttons
+-- Title
+local title = CasinoUI:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
+title:SetPoint("TOP", 0, -12)
+title:SetText("|cff00ff00Free Roll Casino|r")
+
+-- Introduction text
+local introText = CasinoUI:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+introText:SetPoint("TOPLEFT", 15, -50)
+introText:SetJustifyH("LEFT")
+introText:SetWidth(470) -- so text wraps nicely
+introText:SetText(
+    "Welcome to the Free Roll Casino!\n\n" ..
+    "How to use:\n" ..
+    "1) Trade your gold bet to the host.\n" ..
+    "2) The host will switch to the desired game mode.\n" ..
+    "3) Follow the instructions for rolling, using the Troll Dice toy, or playing Blackjack!\n\n" ..
+    "Check out the logs below to see recent outcomes."
+)
+
+-- Show min/max bet info
+local betInfoText = CasinoUI:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+betInfoText:SetPoint("TOPLEFT", introText, "BOTTOMLEFT", 0, -20)
+betInfoText:SetJustifyH("LEFT")
+betInfoText:SetTextColor(1, 0.8, 0)  -- slightly golden color
+
+local function UpdateBetInfo()
+    local minB = FreeRollCasinoDB and FreeRollCasinoDB.minBet or 5
+    local maxB = FreeRollCasinoDB and FreeRollCasinoDB.maxBet or 5000
+    betInfoText:SetText(string.format("Current Bet Range: %dg – %dg", minB, maxB))
+end
+
+UpdateBetInfo()  -- call once on load
+
+-- We'll add a simple refresh button to re-check min/max if changed
+local refreshBetButton = CreateFrame("Button", nil, CasinoUI, "UIPanelButtonTemplate")
+refreshBetButton:SetSize(80, 22)
+refreshBetButton:SetPoint("LEFT", betInfoText, "LEFT", 0, -30)
+refreshBetButton:SetText("Refresh Bet")
+refreshBetButton:SetScript("OnClick", function()
+    UpdateBetInfo()
+end)
+
+-------------------------------------------------------------------------------
+-- Scrollable Logs
+-------------------------------------------------------------------------------
+local logsFrame = CreateFrame("Frame", nil, CasinoUI, "BackdropTemplate")
+logsFrame:SetSize(470, 120)
+logsFrame:SetPoint("TOPLEFT", betInfoText, "BOTTOMLEFT", 0, -70)
+
+logsFrame:SetBackdrop({
+    bgFile   = "Interface\\BUTTONS\\WHITE8X8",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = false, tileSize = 0, edgeSize = 16,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+})
+logsFrame:SetBackdropColor(0.1,0.1,0.1,0.8)
+
+local scrollFrame = CreateFrame("ScrollFrame", "FreeRollCasinoScrollFrame", logsFrame, "UIPanelScrollFrameTemplate")
+scrollFrame:SetPoint("TOPLEFT", 5, -5)
+scrollFrame:SetPoint("BOTTOMRIGHT", -26, 5)
 
 local scrollChild = CreateFrame("Frame")
 scrollChild:SetSize(1, 1)
 scrollFrame:SetScrollChild(scrollChild)
 
--- FontString to show data
 local dataText = scrollChild:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 dataText:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, 0)
+dataText:SetWidth(435)  -- about the width of logsFrame minus scrollbar
 dataText:SetJustifyH("LEFT")
 dataText:SetJustifyV("TOP")
 dataText:SetText("No records yet.")
 
--- Function to refresh text from CasinoRecords
 local function RefreshUI()
     if not CasinoRecords or #CasinoRecords == 0 then
         dataText:SetText("No records yet.")
     else
         local lines = {}
         for i, record in ipairs(CasinoRecords) do
-            -- Format example: [12:34:56] Player(bet=XX) roll=YY => outcome (net=ZZ)
             table.insert(lines, string.format(
                 "[%s] %s (bet=%d) roll=%d => %s (net=%+d)",
                 record.time or "?",
@@ -62,31 +124,37 @@ local function RefreshUI()
         dataText:SetText(table.concat(lines, "\n"))
     end
 
-    -- Adjust scrollChild height so the scrollbar works
+    -- Adjust height so scrollbar is correct
     local textHeight = dataText:GetStringHeight()
     scrollChild:SetHeight(textHeight)
 end
 
-CasinoUI.Refresh = RefreshUI  -- Expose for outside calls
+CasinoUI.Refresh = RefreshUI
 
-------------------------------------------------------------------------------
--- 3 New Buttons to Switch Game Modes
--- We'll call the same internal function that the slash command uses:
--- SlashCmdList["CASINOMODE"]("<mode>")
-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------
+-- Buttons to Switch Game Modes (Optional)
+-------------------------------------------------------------------------------
+local modeFrame = CreateFrame("Frame", nil, CasinoUI, "BackdropTemplate")
+modeFrame:SetSize(470, 40)
+modeFrame:SetPoint("TOPLEFT", logsFrame, "BOTTOMLEFT", 0, -10)
 
--- 1) Free Roll Button
-local freeRollButton = CreateFrame("Button", nil, CasinoUI, "UIPanelButtonTemplate")
+modeFrame:SetBackdrop({
+    bgFile   = "Interface\\BUTTONS\\WHITE8X8",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = false, tileSize = 0, edgeSize = 14,
+    insets = { left = 2, right = 2, top = 2, bottom = 2 },
+})
+modeFrame:SetBackdropColor(0.2,0.2,0.2,0.7)
+
+local freeRollButton = CreateFrame("Button", nil, modeFrame, "UIPanelButtonTemplate")
 freeRollButton:SetSize(90, 22)
-freeRollButton:SetPoint("BOTTOMLEFT", 15, 15)
+freeRollButton:SetPoint("LEFT", modeFrame, "LEFT", 5, 0)
 freeRollButton:SetText("Free Roll")
 freeRollButton:SetScript("OnClick", function()
-    -- This calls the same logic as typing /casinomode freeroll
     SlashCmdList["CASINOMODE"]("freeroll")
 end)
 
--- 2) Troll Dice Button
-local trollDiceButton = CreateFrame("Button", nil, CasinoUI, "UIPanelButtonTemplate")
+local trollDiceButton = CreateFrame("Button", nil, modeFrame, "UIPanelButtonTemplate")
 trollDiceButton:SetSize(90, 22)
 trollDiceButton:SetPoint("LEFT", freeRollButton, "RIGHT", 10, 0)
 trollDiceButton:SetText("Troll Dice")
@@ -94,8 +162,7 @@ trollDiceButton:SetScript("OnClick", function()
     SlashCmdList["CASINOMODE"]("troll")
 end)
 
--- 3) Blackjack Button
-local blackjackButton = CreateFrame("Button", nil, CasinoUI, "UIPanelButtonTemplate")
+local blackjackButton = CreateFrame("Button", nil, modeFrame, "UIPanelButtonTemplate")
 blackjackButton:SetSize(90, 22)
 blackjackButton:SetPoint("LEFT", trollDiceButton, "RIGHT", 10, 0)
 blackjackButton:SetText("Blackjack")
@@ -103,13 +170,35 @@ blackjackButton:SetScript("OnClick", function()
     SlashCmdList["CASINOMODE"]("blackjack")
 end)
 
--- Slash Command to toggle the Casino UI
+local closeButton = CreateFrame("Button", nil, modeFrame, "UIPanelButtonTemplate")
+closeButton:SetSize(60, 22)
+closeButton:SetPoint("RIGHT", modeFrame, "RIGHT", -5, 0)
+closeButton:SetText("Close")
+closeButton:SetScript("OnClick", function()
+    CasinoUI:Hide()
+end)
+
+-------------------------------------------------------------------------------
+-- Auto-Open on Load
+-------------------------------------------------------------------------------
+-- We'll do this by hooking ADDON_LOADED or a small timer if needed.
+local openFrame = CreateFrame("Frame")
+openFrame:RegisterEvent("PLAYER_LOGIN")
+openFrame:SetScript("OnEvent", function(self, event)
+    -- Show the UI and refresh
+    CasinoUI:Show()
+    CasinoUI.Refresh()
+    UpdateBetInfo()
+end)
+
+-- Optionally, if you also want a slash command for toggling
 SLASH_CASINOUI1 = "/casinoui"
 SlashCmdList["CASINOUI"] = function()
-    if FreeRollCasinoUIFrame:IsShown() then
-        FreeRollCasinoUIFrame:Hide()
+    if CasinoUI:IsShown() then
+        CasinoUI:Hide()
     else
-        FreeRollCasinoUIFrame:Show()
-        FreeRollCasinoUIFrame.Refresh()
+        CasinoUI:Show()
+        CasinoUI.Refresh()
+        UpdateBetInfo()
     end
 end
